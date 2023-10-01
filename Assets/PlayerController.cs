@@ -18,6 +18,26 @@ public struct FacType{
 }
 public class PlayerController : MonoBehaviour
 {
+    public class DiamondFactory : Factori
+    {
+        private IEnumerator<Vector3Int> DiamondEnum;
+        private Vector3Int StartPos;
+        public DiamondFactory(Vector3Int startPos, Vector3Int direction)
+        {
+            DiamondEnum = GenDiamond().GetEnumerator();
+            StartPos = startPos;
+            position = startPos;
+            type = "diamond";
+            dir = direction;
+        }
+
+        public void Move() {
+            DiamondEnum.MoveNext();
+            position = DiamondEnum.Current + StartPos;
+        }
+    }
+
+
     public Tilemap tilemap;
     public Tilemap factorymap;
     public Tilemap factoryui;
@@ -64,7 +84,9 @@ public class PlayerController : MonoBehaviour
 
         if(Input.GetMouseButtonDown(0)){
             if(tilemap.GetTile(cellPosition)==black){
-                factories.Add(new Factori{position=cellPosition,type="liner",dir=new Vector3Int(0,1,0)});
+                // factories.Add(new Factori{position=cellPosition,type="liner",dir=new Vector3Int(0,1,0)});
+                // factorymap.SetTile(cellPosition,factoryTypes["liner"]);
+                factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0,1,0)));
                 factorymap.SetTile(cellPosition,factoryTypes["liner"]);
             }
         }
@@ -100,6 +122,12 @@ public class PlayerController : MonoBehaviour
                     factorymap.SetTile(machine.position,factoryTypes["liner"]);
                     MakeSpace(machine.position);
                     break;
+                case "diamond":
+                    factorymap.SetTile(machine.position,null);
+                    ((DiamondFactory) machine).Move();
+                    factorymap.SetTile(machine.position,factoryTypes["liner"]);
+                    MakeSpace(machine.position);
+                    break;
                 default:
                     break;
             }
@@ -128,7 +156,7 @@ public class PlayerController : MonoBehaviour
     //     }
     // }
 
-    IEnumerable<Vector3Int> GenDiamond(){
+    static IEnumerable<Vector3Int> GenDiamond(){
         yield return new Vector3Int(0,0);
         int ring=0;
         int x=0,y=0;
@@ -140,4 +168,5 @@ public class PlayerController : MonoBehaviour
             for(int i=0;i<ring;i++) yield return new Vector3Int(x++,y++);
         }
     }
+
 }
