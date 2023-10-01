@@ -84,11 +84,18 @@ public class PlayerController : MonoBehaviour
 
         if(Input.GetMouseButtonDown(0)){
             if(tilemap.GetTile(cellPosition)==black){
-                // factories.Add(new Factori{position=cellPosition,type="liner",dir=new Vector3Int(0,1,0)});
-                // factorymap.SetTile(cellPosition,factoryTypes["liner"]);
-                factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0,1,0)));
+                factories.Add(new Factori{position=cellPosition,type="liner",dir=new Vector3Int(0,1,0)});
                 factorymap.SetTile(cellPosition,factoryTypes["liner"]);
             }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha1)) {
+            if (tilemap.GetTile(cellPosition) == black)
+            {
+                factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0, 1, 0)));
+                factorymap.SetTile(cellPosition, factoryTypes["liner"]);
+            }
+
         }
 
         if(Input.GetKeyDown(KeyCode.Space)){
