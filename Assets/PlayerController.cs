@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using Unity.VisualScripting;
 using UnityEditor.Tilemaps;
 using UnityEngine;
@@ -38,7 +39,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
+    public TMP_Text totalScoreDisplay;
     public Tilemap tilemap;
     public Tilemap factorymap;
     public Tilemap factoryui;
@@ -55,6 +56,7 @@ public class PlayerController : MonoBehaviour
     float timer;
     public float interval = 5;
     int currDir = 0;
+    UInt64 totalSpace = 1;
     readonly Vector3Int[] dires = new Vector3Int[]{new (0,1,0), new (1,0,0), new(0,-1,0), new (-1,0,0)};
     // Start is called before the first frame update
     void Start()
@@ -83,7 +85,7 @@ public class PlayerController : MonoBehaviour
             factoryui.SetTile(previousTile.Value,null);
         }
         factoryui.SetTile(cellPosition,factoryTypes["liner"]);
-        Debug.Log(dires[currDir]);
+        //Debug.Log(dires[currDir]);
         //float angle = Mathf.Atan2(dires[currDir].x, dires[currDir].y) * Mathf.Rad2Deg - 90f;
         factoryui.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
         previousTile = cellPosition;
@@ -107,9 +109,13 @@ public class PlayerController : MonoBehaviour
         }
 
         if(Input.GetKeyDown(KeyCode.Space)){
-            Debug.Log("spacebar: " + spacePress);
+            //Debug.Log("spacebar: " + spacePress);
+            
             dit.MoveNext();
-            Debug.Log(dit.Current);
+            //Debug.Log(dit.Current);
+            while(tilemap.GetTile(dit.Current)==black){
+                dit.MoveNext();    
+            }
             MakeSpace(dit.Current);
             spacePress+=1;            
         }
@@ -144,7 +150,7 @@ public class PlayerController : MonoBehaviour
                 case "diamond":
                     factorymap.SetTile(machine.position,null);
                     ((DiamondFactory) machine).Move();
-                    factorymap.SetTile(machine.position,factoryTypes["liner"]);
+                    factorymap.SetTile(machine.position,factoryTypes["diamond"]);
                     MakeSpace(machine.position);
                     break;
                 default:
@@ -153,6 +159,7 @@ public class PlayerController : MonoBehaviour
         }
     }
     void MakeSpace(Vector3Int place){
+        totalSpace++;
         int currx=place.x,curry=place.y;
         maxx=Math.Max(maxx,currx);
         maxy=Math.Max(maxy,curry);
@@ -160,6 +167,7 @@ public class PlayerController : MonoBehaviour
         miny=Math.Min(miny,curry);
         AdjustCamera();
         tilemap.SetTile(place,black);
+        totalScoreDisplay.text = totalSpace.ToString();
     }
 
     void AdjustCamera(){
