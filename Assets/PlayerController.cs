@@ -20,27 +20,31 @@ public struct FacType{
 }
 public class PlayerController : MonoBehaviour
 {
+    public Tilemap tilemap;
     public class DiamondFactory : Factori
     {
         private IEnumerator<Vector3Int> DiamondEnum;
         private Vector3Int StartPos;
-        public DiamondFactory(Vector3Int startPos, Vector3Int direction)
+        private PlayerController Pc;
+        public DiamondFactory(Vector3Int startPos, Vector3Int direction, PlayerController pc)
         {
             DiamondEnum = GenDiamond().GetEnumerator();
             StartPos = startPos;
             position = startPos;
             type = "diamond";
             dir = direction;
+            Pc = pc;
         }
 
         public void Move() {
-            DiamondEnum.MoveNext();
-            position = DiamondEnum.Current + StartPos;
+            while(Pc.tilemap.GetTile(position)==Pc.black){
+                DiamondEnum.MoveNext();
+                position = DiamondEnum.Current + StartPos;
+            }
         }
     }
 
     public TMP_Text totalScoreDisplay;
-    public Tilemap tilemap;
     public Tilemap factorymap;
     public Tilemap factoryui;
     public Tile black;
@@ -56,7 +60,10 @@ public class PlayerController : MonoBehaviour
     float timer;
     public float interval = 5;
     int currDir = 0;
+    string currMach = "";
     UInt64 totalSpace = 1;
+    UInt64 goalSpace = 100;
+    int phase = 0;
     readonly Vector3Int[] dires = new Vector3Int[]{new (0,1,0), new (1,0,0), new(0,-1,0), new (-1,0,0)};
     // Start is called before the first frame update
     void Start()
@@ -84,30 +91,38 @@ public class PlayerController : MonoBehaviour
         if(previousTile.HasValue){
             factoryui.SetTile(previousTile.Value,null);
         }
-        factoryui.SetTile(cellPosition,factoryTypes["liner"]);
+        if(currMach!=""){
+            factoryui.SetTile(cellPosition,factoryTypes[currMach]);
+            factoryui.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
+        }
         //Debug.Log(dires[currDir]);
         //float angle = Mathf.Atan2(dires[currDir].x, dires[currDir].y) * Mathf.Rad2Deg - 90f;
-        factoryui.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
         previousTile = cellPosition;
 
         if(Input.GetMouseButtonDown(0)){
             if(tilemap.GetTile(cellPosition)==black){
-                factories.Add(new Factori{position=cellPosition,type="liner",dir=dires[currDir]});
-                factorymap.SetTile(cellPosition,factoryTypes["liner"]);
-                factorymap.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
-        
+                switch(currMach){
+                    case "liner":
+                        factories.Add(new Factori{position=cellPosition,type="liner",dir=dires[currDir]});
+                        factorymap.SetTile(cellPosition,factoryTypes["liner"]);
+                        factorymap.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
+                        break;
+                    case "diamond":
+                        factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0, 1, 0),this));
+                        factorymap.SetTile(cellPosition, factoryTypes["diamond"]);
+                        break;
+                }        
             }
         }
 
         if (Input.GetKeyDown(KeyCode.Alpha1)) {
-            if (tilemap.GetTile(cellPosition) == black)
-            {
-                factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0, 1, 0)));
-                factorymap.SetTile(cellPosition, factoryTypes["liner"]);
-            }
-
+            currMach = "diamond";
         }
-
+        if (Input.GetKeyDown(KeyCode.Alpha2)) {
+            currMach = "liner";
+        }
+        
+        
         if(Input.GetKeyDown(KeyCode.Space)){
             //Debug.Log("spacebar: " + spacePress);
             
@@ -159,20 +174,30 @@ public class PlayerController : MonoBehaviour
         }
     }
     void MakeSpace(Vector3Int place){
-        totalSpace++;
         int currx=place.x,curry=place.y;
         maxx=Math.Max(maxx,currx);
         maxy=Math.Max(maxy,curry);
         minx=Math.Min(minx,currx);
         miny=Math.Min(miny,curry);
-        AdjustCamera();
         tilemap.SetTile(place,black);
-        totalScoreDisplay.text = totalSpace.ToString();
+        
+        totalSpace++;
+        totalScoreDisplay.text = totalSpace.ToString() + " / " + goalSpace.ToString();
+        //AdjustCamera();
+        if(totalSpace>=goalSpace){
+            phase+=1;
+            switch(phase){
+                case 1:
+                    camera.GetComponent<Camera>().orthographicSize=50;
+                    break;
+            } 
+        }
+        
     }
 
     void AdjustCamera(){
-        camera.GetComponent<Camera>().orthographicSize=Math.Max(5,Math.Max( maxx-minx, maxy-miny ) *0.7f);
-        camera.transform.position = new Vector3((maxx+minx)/2.0f + 0.5f,(maxy+miny)/2.0f + 0.5f,-10);
+        //camera.GetComponent<Camera>().orthographicSize=Math.Max(5,Math.Max( maxx-minx, maxy-miny ) *0.7f);
+        //camera.transform.position = new Vector3((maxx+minx)/2.0f + 0.5f,(maxy+miny)/2.0f + 0.5f,-10);
     }
     // Vector3Int getNextSpace(Vector3Int start){
     //     int n = 0;
@@ -188,11 +213,12 @@ public class PlayerController : MonoBehaviour
         int ring=0;
         int x=0,y=0;
         while(true){
-            ring++;x=0;y=ring;
-            for(int i=0;i<ring;i++) yield return new Vector3Int(x++,y--);
-            for(int i=0;i<ring;i++) yield return new Vector3Int(x--,y--);
-            for(int i=0;i<ring;i++) yield return new Vector3Int(x--,y++);
-            for(int i=0;i<ring;i++) yield return new Vector3Int(x++,y++);
+            ring+=2;x=-ring/2;y=ring/2;
+            for(int i=0;i<ring;i++) yield return new Vector3Int(++x,y);
+            for(int i=0;i<ring;i++) yield return new Vector3Int(x,--y);
+            for(int i=0;i<ring;i++) yield return new Vector3Int(--x,y);
+            for(int i=0;i<ring;i++) yield return new Vector3Int(x,++y);
+           
         }
     }
 
