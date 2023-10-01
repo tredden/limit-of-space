@@ -1,12 +1,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public struct Factori {
+public class Factori {
     public Vector3Int position;
     public string type;
+    public Vector3Int dir;
 }
 
 [Serializable]
@@ -29,10 +31,13 @@ public class PlayerController : MonoBehaviour
     public List<FacType> facTypes;
     Dictionary<string,Tile> factoryTypes;
     Vector3Int? previousTile;
+    float timer;
+    public float interval = 5;
     // Start is called before the first frame update
     void Start()
     {
         factoryTypes = new Dictionary<string,Tile>{};
+        factories = new List<Factori>();
         foreach (FacType item in facTypes)
             factoryTypes.Add(item.key,item.val);
         //Debug.Log(factoryTypes.Keys);
@@ -50,7 +55,7 @@ public class PlayerController : MonoBehaviour
         mousePos.z = Camera.main.nearClipPlane;
         Vector3 worldPosition = Camera.main.ScreenToWorldPoint(mousePos);
         Vector3Int cellPosition = factoryui.WorldToCell(worldPosition);
-        Debug.Log(factoryTypes.Keys);
+        //Debug.Log(factoryTypes.Keys);
         if(previousTile.HasValue){
             factoryui.SetTile(previousTile.Value,null);
         }
@@ -58,8 +63,10 @@ public class PlayerController : MonoBehaviour
         previousTile = cellPosition;
 
         if(Input.GetMouseButtonDown(0)){
-            factories.Add(new Factori{position=cellPosition,type="liner"});
-            factorymap.SetTile(cellPosition,factoryTypes["liner"]);
+            if(tilemap.GetTile(cellPosition)==black){
+                factories.Add(new Factori{position=cellPosition,type="liner",dir=new Vector3Int(0,1,0)});
+                factorymap.SetTile(cellPosition,factoryTypes["liner"]);
+            }
         }
 
         if(Input.GetKeyDown(KeyCode.Space)){
@@ -73,6 +80,31 @@ public class PlayerController : MonoBehaviour
         
     }
 
+    void FixedUpdate(){
+        timer += Time.fixedDeltaTime;
+        while(timer >= interval)
+        {
+            DoFactories();
+            Debug.Log("done factori");
+            timer -= interval;
+        }
+    }
+    
+    void DoFactories(){
+        for(int i=0;i<factories.Count;i++){
+            Factori machine = factories[i];
+            switch(machine.type){
+                case "liner":
+                    factorymap.SetTile(machine.position,null);
+                    machine.position = machine.position + machine.dir;
+                    factorymap.SetTile(machine.position,factoryTypes["liner"]);
+                    MakeSpace(machine.position);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
     void MakeSpace(Vector3Int place){
         int currx=place.x,curry=place.y;
         maxx=Math.Max(maxx,currx);
