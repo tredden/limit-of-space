@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using UnityEditor.Tilemaps;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -33,6 +34,8 @@ public class PlayerController : MonoBehaviour
     Vector3Int? previousTile;
     float timer;
     public float interval = 5;
+    int currDir = 0;
+    readonly Vector3Int[] dires = new Vector3Int[]{new (0,1,0), new (1,0,0), new(0,-1,0), new (-1,0,0)};
     // Start is called before the first frame update
     void Start()
     {
@@ -60,12 +63,17 @@ public class PlayerController : MonoBehaviour
             factoryui.SetTile(previousTile.Value,null);
         }
         factoryui.SetTile(cellPosition,factoryTypes["liner"]);
+        Debug.Log(dires[currDir]);
+        //float angle = Mathf.Atan2(dires[currDir].x, dires[currDir].y) * Mathf.Rad2Deg - 90f;
+        factoryui.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
         previousTile = cellPosition;
 
         if(Input.GetMouseButtonDown(0)){
             if(tilemap.GetTile(cellPosition)==black){
-                factories.Add(new Factori{position=cellPosition,type="liner",dir=new Vector3Int(0,1,0)});
+                factories.Add(new Factori{position=cellPosition,type="liner",dir=dires[currDir]});
                 factorymap.SetTile(cellPosition,factoryTypes["liner"]);
+                factorymap.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
+        
             }
         }
 
@@ -77,7 +85,9 @@ public class PlayerController : MonoBehaviour
             spacePress+=1;            
         }
 
-        
+        if(Input.GetKeyDown(KeyCode.R)){
+            currDir = (currDir+1)%4;
+        }
     }
 
     void FixedUpdate(){
@@ -98,6 +108,8 @@ public class PlayerController : MonoBehaviour
                     factorymap.SetTile(machine.position,null);
                     machine.position = machine.position + machine.dir;
                     factorymap.SetTile(machine.position,factoryTypes["liner"]);
+                    factorymap.SetTransformMatrix(machine.position,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],machine.dir)));
+        
                     MakeSpace(machine.position);
                     break;
                 default:
