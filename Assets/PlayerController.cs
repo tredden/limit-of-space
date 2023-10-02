@@ -184,6 +184,7 @@ public class PlayerController : MonoBehaviour
     List<Factori> factoriesToRemove;
     List<Factori> factoriesToAdd;
     public List<FacType> facTypes;
+    public List<FacType> secretFacTypes;
     Dictionary<string, Tile> factoryTypes;
     Vector3Int? previousTile;
     float timer;
@@ -206,6 +207,8 @@ public class PlayerController : MonoBehaviour
         factoriesToRemove = new List<Factori>();
         factoriesToAdd = new List<Factori>();
         foreach (FacType item in facTypes)
+            factoryTypes.Add(item.key,item.val);
+        foreach (FacType item in secretFacTypes)
             factoryTypes.Add(item.key,item.val);
         for(int i=0;i<factoryTypes.Count;i++){
             isAuto.Add(false);
@@ -286,11 +289,6 @@ public class PlayerController : MonoBehaviour
                 currMach = "bomb";
             }
 
-
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                Debug.Log("spacebar: " + spacePress);
-
             if (Input.GetKeyDown(KeyCode.Alpha4)) {
                 currMach = "speed";
             }
@@ -312,9 +310,9 @@ public class PlayerController : MonoBehaviour
             if(Input.GetKeyDown(KeyCode.R)){
                 upgrades.transform.GetChild(0).GetComponent<Button>().onClick.Invoke();
             }
+            }
         }
-    }
-
+        
     void FixedUpdate(){
         float delta = Time.fixedDeltaTime;
         foreach (Factori factory in factories) {
@@ -442,6 +440,7 @@ public class PlayerController : MonoBehaviour
             yield return null;
         }
         factories.Clear();
+        factorymap.ClearAllTiles();
         Whiteout();
         square.GetComponent<SpriteRenderer>().color = new Color(0,0,0,0);
         float zoomTime = 7;
