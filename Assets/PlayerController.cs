@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using Random = UnityEngine.Random;
 
 public abstract class Factori
 {
@@ -12,7 +13,7 @@ public abstract class Factori
     public Vector3Int dir;
     public bool active = true;
 
-    public abstract void Move();
+    public abstract void Tick(float delta);
     public float delay = 0;
 }
 
@@ -41,8 +42,13 @@ public class PlayerController : MonoBehaviour
             Pc = pc;
         }
 
-        override public void Move()
+        override public void Tick(float delta)
         {
+            delay += delta;
+            if (delay < Pc.interval) {
+                return;
+            }
+            delay -= Pc.interval;
             Vector3Int lastPos = position;
             if (false)
             {
@@ -74,12 +80,89 @@ public class PlayerController : MonoBehaviour
             Pc = pc;
         }
 
-        override public void Move()
+        override public void Tick(float delta)
         {
+            delay += delta;
+            if (delay < Pc.interval) {
+                return;
+            }
+            delay -= Pc.interval;
+
             Vector3Int lastPos = position;
             position += dir;
             Pc.MoveFactory(this, lastPos);
             Pc.MakeSpace(position);
+        }
+    }
+
+    private class Movement {
+        public Vector3 position;
+        public Vector3 velocity;
+        public Vector3 acceleration;
+
+        public void Tick(float delta) {
+            velocity += acceleration * delta;
+            position += velocity * delta;
+        }
+    }
+
+    private class Bomblet : Factori {
+        protected PlayerController Pc;
+        private int spacesUntilExplode = 10;
+        private Movement movement;
+        public Bomblet(Movement movement, PlayerController pc) {
+            position = Vector3Int.RoundToInt(movement.position);
+            type = "bomblet";
+            dir = Vector3Int.RoundToInt(movement.velocity);
+            Pc = pc;
+            this.movement = movement;
+        }
+
+        override public void Tick(float delta) {
+            if (spacesUntilExplode <= 0) {
+                Explode();
+                return;
+            }
+
+            Vector3Int lastPos = position;
+            movement.Tick(delta);
+            position = Vector3Int.RoundToInt(movement.position);
+
+            Pc.MoveFactory(this, lastPos);
+
+            if (Pc.tilemap.GetTile(position) == Pc.white) {
+                spacesUntilExplode--;
+                Pc.MakeSpace(position);
+            }
+        }
+
+        protected virtual void Explode() {
+            Pc.RemoveFactory(this);
+        }
+    }
+
+    private class Bomb : Bomblet {
+        public Bomb(Vector3Int startPos, Vector3 velocity, PlayerController pc) : base(new Movement{
+                    position = startPos,
+                    velocity = velocity * 4,
+                    acceleration = new Vector3(0, -0.8f, 0) * 4,
+            }, pc) {
+        }
+
+        override protected void Explode() {
+            float scale = 4;
+            for (int i = 0; i < 20; i++) {
+                Movement subMovement = new Movement{
+                    position = position,
+                    velocity = new Vector3(Random.Range(-6f, 6f), Random.Range(1f, 9f), 0) * 4,
+                    //acceleration = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * 4,
+                    acceleration = new Vector3(0, -4, 0) * 4,
+                };
+
+                Pc.AddFactory(new Bomblet(subMovement, Pc));
+            }
+
+            base.Explode();
         }
     }
         
@@ -97,6 +180,8 @@ public class PlayerController : MonoBehaviour
     private int maxx, maxy, minx, miny;
 
     List<Factori> factories;
+    List<Factori> factoriesToRemove;
+    List<Factori> factoriesToAdd;
     public List<FacType> facTypes;
     Dictionary<string, Tile> factoryTypes;
     Vector3Int? previousTile;
@@ -116,6 +201,8 @@ public class PlayerController : MonoBehaviour
     {
         factoryTypes = new Dictionary<string, Tile> { };
         factories = new List<Factori>();
+        factoriesToRemove = new List<Factori>();
+        factoriesToAdd = new List<Factori>();
         foreach (FacType item in facTypes)
             factoryTypes.Add(item.key, item.val);
         //Debug.Log(factoryTypes.Keys);
@@ -175,6 +262,11 @@ public class PlayerController : MonoBehaviour
                             factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0, 1, 0), this));
                             factorymap.SetTile(cellPosition, factoryTypes["diamond"]);
                             break;
+                        case "bomb":
+                            Vector3 direction = dires[currDir] * 3 + new Vector3(0, Random.Range(0.3f, 3f), 0);
+                            factories.Add(new Bomb(cellPosition, direction, this));
+                            factorymap.SetTile(cellPosition, factoryTypes["bomb"]);
+                            break;
                     }
                 }
             }
@@ -184,6 +276,9 @@ public class PlayerController : MonoBehaviour
             }
             if (Input.GetKeyDown(KeyCode.Alpha2)) {
                 currMach = "diamond";
+            }
+            if (Input.GetKeyDown(KeyCode.Alpha3)) {
+                currMach = "bomb";
             }
 
 
@@ -210,36 +305,36 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate(){
         float delta = Time.fixedDeltaTime;
-        for(int i=0;i<factories.Count;i++){
-            Factori machine = factories[i];
-            machine.delay += delta;
-            if(machine.delay>=interval){
-                machine.delay-=interval;
-                machine.Move();
-                // switch(machine.type){
-                //     case "liner":
-                //         factorymap.SetTile(machine.position,null);
-                //         machine.position = machine.position + machine.dir;
-                //         factorymap.SetTile(machine.position,factoryTypes["liner"]);
-                //         factorymap.SetTransformMatrix(machine.position,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],machine.dir)));
-            
-                //         MakeSpace(machine.position);
-                //         break;
-                //     case "diamond":
-                //         factorymap.SetTile(machine.position,null);
-                //         ((DiamondFactory) machine).Move();
-                //         factorymap.SetTile(machine.position,factoryTypes["diamond"]);
-                //         MakeSpace(machine.position);
-                //         break;
-                //     default:
-                //         break;
-                // }
-            // if(Math.Abs(machine.position.x) > 50 || Math.Abs(machine.position.y)>50){
-            //     machine.active=false;
-            //     factorymap.SetTile(machine.position,null);
-            // }
+        foreach (Factori factory in factories) {
+            factory.Tick(delta);
+
+            if (Math.Abs(factory.position.x) > 50 || Math.Abs(factory.position.y) > 50)
+            {
+                RemoveFactory(factory);
             }
         }
+
+        foreach (Factori factory in factoriesToRemove) {
+            factories.Remove(factory);
+            factorymap.SetTile(factory.position, null);
+        }
+        factoriesToRemove.Clear();
+        foreach (Factori factory in factoriesToAdd) {
+            factories.Add(factory);
+            factorymap.SetTile(factory.position, factoryTypes[factory.type]);
+            factorymap.SetTransformMatrix(factory.position,
+                                          Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0], dires[currDir])));
+        }
+        factoriesToAdd.Clear();
+        Debug.Log(factoriesToRemove);
+    }
+
+    void AddFactory(Factori factory) {
+        factoriesToAdd.Add(factory);
+    }
+
+    void RemoveFactory(Factori factory) {
+        factoriesToRemove.Add(factory);
     }
 
     void MoveFactory(Factori factory, Vector3Int fromPos)
@@ -257,55 +352,54 @@ public class PlayerController : MonoBehaviour
                 Quaternion.FromToRotation(dires[0], factory.dir)));
     }
 
-    void MakeSpace(Vector3Int place)
-    {
-        if (tilemap.GetTile(place) != black)
-        {
-            int currx = place.x, curry = place.y;
+    void MakeSpace(Vector3Int place){
+        if(tilemap.GetTile(place)!=black){
+        int currx=place.x,curry=place.y;
+        
 
+        maxx=Math.Max(maxx,currx);
+        maxy=Math.Max(maxy,curry);
+        minx=Math.Min(minx,currx);
+        miny=Math.Min(miny,curry);
+        tilemap.SetTile(place,black);
+        if(-50<=currx && currx<=50 && -50<=curry && curry<=50 && cutscene==0){
+            if(localSpace<10000){
+                //totalSpace++;
+                
+                localSpace++;
 
-            maxx = Math.Max(maxx, currx);
-            maxy = Math.Max(maxy, curry);
-            minx = Math.Min(minx, currx);
-            miny = Math.Min(miny, curry);
-            tilemap.SetTile(place, black);
-            if (-50 <= currx && currx <= 50 && -50 <= curry && curry <= 50 && cutscene == 0)
-            {
-                if (localSpace < 10000)
-                {
-                    //totalSpace++;
-
-                    localSpace++;
-
-                    AdjustCamera();
-                    UpdateScore();
-                    if (localSpace >= goalSpace)
-                    {
-                        phase += 1;
-                        switch (phase)
-                        {
-                            case 1:
-                                goalSpace = 1000;
-                                //camera.GetComponent<Camera>().orthographicSize=50;
-                                break;
-                            case 2:
-                                goalSpace = 10000;
-                                break;
-                            case 3:
-                                goalSpace = 100;
-                                localSpace = 1;
-                                phase = 0;
-                                cutscene = 1;
-                                iterations += 1;
-                                dit = GenDiamond().GetEnumerator();
-                                StartCoroutine(ZoomTransition());
-                                break;
-                        }
-                    }
+                AdjustCamera();
+                UpdateScore();
+                if(localSpace>=goalSpace){
+                    phase+=1;
+                    Upgrade();
+                    switch(phase){
+                        case 1:
+                            goalSpace = 100;
+                            break;
+                        case 2:
+                            goalSpace = 1000;
+                            //camera.GetComponent<Camera>().orthographicSize=50;
+                            break;
+                        case 3:
+                            goalSpace = 10000;
+                            break;
+                        case 4:
+                            goalSpace = 10;
+                            localSpace = 1;
+                            phase = 0;
+                            cutscene = 1;
+                            iterations += 1;
+                            dit = GenDiamond().GetEnumerator();
+                            StartCoroutine(ZoomTransition());
+                            break;
+                    } 
                 }
             }
         }
+        }
     }
+
     void Upgrade(){
         upgradeLevel+=1;
         switch(upgradeLevel){
