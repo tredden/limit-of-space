@@ -157,13 +157,16 @@ MonoBehaviour:
   factorymap: {fileID: 878506152}
   factoryui: {fileID: 664040961}
   black: {fileID: 11400000, guid: 559e0ddb9ef502a479002ae85bc3b89b, type: 2}
+  white: {fileID: 11400000, guid: 4ed7f8488f3cb2e40836b1dd68ee5b36, type: 2}
   camera: {fileID: 519420028}
+  square: {fileID: 1783269905}
   facTypes:
   - key: liner
     val: {fileID: 11400000, guid: 3b5223b867673a343a2799608ec9d229, type: 2}
   - key: diamond
     val: {fileID: 11400000, guid: 1a87bd328a842804d9035f109d484362, type: 2}
-  interval: 1
+  interval: 0.01
+  phase: 0
 --- !u!4 &244835248
 Transform:
   m_ObjectHideFlags: 0
@@ -1056,28 +1059,28 @@ Tilemap:
     m_Data:
       e00: 0
       e01: 0
-      e02: 3.8750038
-      e03: 3.8750038
+      e02: -2.1006438e-19
+      e03: -2.1006438e-19
       e10: 0
       e11: 0
-      e12: 5.1e-43
-      e13: 5.1e-43
+      e12: 8.42e-43
+      e13: 8.42e-43
       e20: -3.5564315e-27
       e21: 1e-45
-      e22: -3.5066571e-15
-      e23: -129394.625
+      e22: 6.3135594e-19
+      e23: 2.0343819
       e30: 4.5904e-41
       e31: 0
-      e32: 5.1e-43
-      e33: 5.1e-43
+      e32: 8.44e-43
+      e33: 8.46e-43
   m_TileColorArray:
   - m_RefCount: 0
-    m_Data: {r: NaN, g: NaN, b: NaN, a: NaN}
+    m_Data: {r: 3.3603e-41, g: 3.3603e-41, b: 3.3603e-41, a: 3.3603e-41}
   m_TileObjectToInstantiateArray: []
   m_AnimationFrameRate: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Origin: {x: -2, y: 0, z: 0}
-  m_Size: {x: 4, y: 4, z: 1}
+  m_Origin: {x: -41, y: 0, z: 0}
+  m_Size: {x: 93, y: 4, z: 1}
   m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
   m_TileOrientation: 0
   m_TileOrientationMatrix:
@@ -3709,6 +3712,90 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1714766523}
   m_CullTransparentMesh: 1
+--- !u!1 &1783269905
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1783269907}
+  - component: {fileID: 1783269906}
+  m_Layer: 0
+  m_Name: Square
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!212 &1783269906
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1783269905}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 3
+  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 1, y: 1}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_MaskInteraction: 0
+  m_SpriteSortPoint: 0
+--- !u!4 &1783269907
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1783269905}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.5, y: 0.5, z: 0}
+  m_LocalScale: {x: 100, y: 100, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2012583782
 GameObject:
   m_ObjectHideFlags: 0
