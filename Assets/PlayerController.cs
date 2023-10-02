@@ -258,7 +258,7 @@ public class PlayerController : MonoBehaviour
             //float angle = Mathf.Atan2(dires[currDir].x, dires[currDir].y) * Mathf.Rad2Deg - 90f;
             previousTile = cellPosition;
 
-            for(int i=0;i<factoryTypes.Count;i++){
+            for(int i=0;i<facTypes.Count;i++){
                 if(cooldown[i]>0)
                     cooldown[i]-=Time.deltaTime;
                 else
@@ -284,9 +284,12 @@ public class PlayerController : MonoBehaviour
                             }
                             break;
                         case "bomb":
+                            if(cooldown[2]==0){
                             Vector3 direction = dires[currDir] * 3 + new Vector3(0, Random.Range(0.3f, 3f), 0);
                             factories.Add(new Bomb(cellPosition, direction, this));
                             factorymap.SetTile(cellPosition, factoryTypes["bomb"]);
+                            cooldown[2]=facTypes[2].cooldown;
+                            }
                             break;
                     }
                 }
