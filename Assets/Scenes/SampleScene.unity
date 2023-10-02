@@ -530,6 +530,9 @@ MonoBehaviour:
     val: {fileID: 11400000, guid: 0323f91776adc2140ab904a13ad98c8a, type: 2}
   - key: speed
     val: {fileID: 11400000, guid: 1da82bc590a619d4e884806e32ebb105, type: 2}
+  secretFacTypes:
+  - key: bomblet
+    val: {fileID: 11400000, guid: 0323f91776adc2140ab904a13ad98c8a, type: 2}
   interval: 0.01
   phase: 0
 --- !u!4 &244835248
