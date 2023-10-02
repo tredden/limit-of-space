@@ -7,10 +7,12 @@ using UnityEditor.Tilemaps;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class Factori {
+public abstract class Factori {
     public Vector3Int position;
     public string type;
     public Vector3Int dir;
+
+    public abstract void Move();
 }
 
 [Serializable]
@@ -36,11 +38,32 @@ public class PlayerController : MonoBehaviour
             Pc = pc;
         }
 
-        public void Move() {
-            while(Pc.tilemap.GetTile(position)==Pc.black){
+        override public void Move() {
+            Vector3Int lastPos = position;
+            while (Pc.tilemap.GetTile(position)==Pc.black) {
                 DiamondEnum.MoveNext();
                 position = DiamondEnum.Current + StartPos;
             }
+            
+            Pc.MoveFactory(this, lastPos);
+            Pc.MakeSpace(position);
+        }
+    }
+
+    public class LinerFactory : Factori {
+        private PlayerController Pc;
+        public LinerFactory(Vector3Int startPos, Vector3Int direction, PlayerController pc) {
+            position = startPos;
+            type = "liner";
+            dir = direction;
+            Pc = pc;
+        }
+
+        override public void Move() {
+            Vector3Int lastPos = position;
+            position += dir;
+            Pc.MoveFactory(this, lastPos);
+            Pc.MakeSpace(position);
         }
     }
 
@@ -103,7 +126,7 @@ public class PlayerController : MonoBehaviour
             if(tilemap.GetTile(cellPosition)==black){
                 switch(currMach){
                     case "liner":
-                        factories.Add(new Factori{position=cellPosition,type="liner",dir=dires[currDir]});
+                        factories.Add(new LinerFactory(cellPosition, dires[currDir], this));
                         factorymap.SetTile(cellPosition,factoryTypes["liner"]);
                         factorymap.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
                         break;
@@ -153,26 +176,38 @@ public class PlayerController : MonoBehaviour
     void DoFactories(){
         for(int i=0;i<factories.Count;i++){
             Factori machine = factories[i];
-            switch(machine.type){
-                case "liner":
-                    factorymap.SetTile(machine.position,null);
-                    machine.position = machine.position + machine.dir;
-                    factorymap.SetTile(machine.position,factoryTypes["liner"]);
-                    factorymap.SetTransformMatrix(machine.position,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],machine.dir)));
+            machine.Move();
+            // switch(machine.type){
+            //     case "liner":
+            //         factorymap.SetTile(machine.position,null);
+            //         machine.position = machine.position + machine.dir;
+            //         factorymap.SetTile(machine.position,factoryTypes["liner"]);
+
         
-                    MakeSpace(machine.position);
-                    break;
-                case "diamond":
-                    factorymap.SetTile(machine.position,null);
-                    ((DiamondFactory) machine).Move();
-                    factorymap.SetTile(machine.position,factoryTypes["diamond"]);
-                    MakeSpace(machine.position);
-                    break;
-                default:
-                    break;
-            }
+            //         MakeSpace(machine.position);
+            //         break;
+            //     case "diamond":
+            //         ((DiamondFactory) machine).Move();
+            //         break;
+            //     default:
+            //         break;
+            // }
         }
     }
+
+    void MoveFactory(Factori factory, Vector3Int fromPos) {
+        Tile tile = factoryTypes[factory.type];
+        // Delete the last position
+        if (factorymap.GetTile(fromPos) == tile) {
+            factorymap.SetTile(fromPos, null);
+        }
+        // Set the next position
+        factorymap.SetTile(factory.position, tile);
+        factorymap.SetTransformMatrix(
+            factory.position, Matrix4x4.Rotate(
+                Quaternion.FromToRotation(dires[0], factory.dir)));
+    }
+
     void MakeSpace(Vector3Int place){
         int currx=place.x,curry=place.y;
         maxx=Math.Max(maxx,currx);
