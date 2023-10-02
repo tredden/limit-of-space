@@ -91,9 +91,35 @@ public class PlayerController : MonoBehaviour
             delay -= Pc.interval;
 
             Vector3Int lastPos = position;
-            position += dir;
+            while (Pc.tilemap.GetTile(position) == Pc.black)
+            {
+                position += dir;
+            }
+            
             Pc.MoveFactory(this, lastPos);
             Pc.MakeSpace(position);
+        }
+    }
+    public class SpeedFactory : Factori
+    {
+        private PlayerController Pc;
+        public SpeedFactory(Vector3Int startPos, Vector3Int direction, PlayerController pc)
+        {
+            position = startPos;
+            type = "speed";
+            dir = direction;
+            Pc = pc;
+        }
+
+        override public void Tick(float delta)
+        {
+            delay += delta;
+            if (delay < Pc.interval) {
+                return;
+            }
+            delay -= Pc.interval;
+
+            Pc.MoveFactory(this, position);
         }
     }
 
@@ -167,7 +193,10 @@ public class PlayerController : MonoBehaviour
             base.Explode();
         }
     }
-        
+    public GameObject wintext;
+    public AudioClip mainTheme;
+    public AudioClip endTheme;
+    public GameObject explosion;
     public TMP_Text totalScoreDisplay;
     public Tilemap factorymap;
     public Tilemap factoryui;
@@ -198,8 +227,10 @@ public class PlayerController : MonoBehaviour
     public int phase = 0;
     int cutscene = 0;
     int iterations = 0;
-    List<bool> isAuto = new List<bool>();
-    List<float> cooldown = new List<float>();
+    List<Vector3Int> blackList = new();
+    List<bool> isAuto = new();
+    List<float> cooldown = new();
+    int speedMod = 0;
     readonly Vector3Int[] dires = new Vector3Int[]{new (0,1,0), new (1,0,0), new(0,-1,0), new (-1,0,0)};
     // Start is called before the first frame update
     void Start()
@@ -223,8 +254,10 @@ public class PlayerController : MonoBehaviour
         spacePress = 0;
         previousTile = null;
         Whiteout();
-        //cutscene = 1;
-        //StartCoroutine(ZoomTransition());
+        // play final seq
+        //  iterations=5;
+        //  cutscene = 2;
+        //  StartCoroutine(EndScene());
     }
 
     // Update is called once per frame
@@ -252,7 +285,8 @@ public class PlayerController : MonoBehaviour
             if (currMach != "")
             {
                 factoryui.SetTile(cellPosition, factoryTypes[currMach]);
-                factoryui.SetTransformMatrix(cellPosition, Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0], dires[currDir])));
+                if(currMach=="liner" || currMach=="bomb")
+                    factoryui.SetTransformMatrix(cellPosition, Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0], dires[currDir])));
             }
             //Debug.Log(dires[currDir]);
             //float angle = Mathf.Atan2(dires[currDir].x, dires[currDir].y) * Mathf.Rad2Deg - 90f;
@@ -260,9 +294,14 @@ public class PlayerController : MonoBehaviour
 
             for(int i=0;i<facTypes.Count;i++){
                 if(cooldown[i]>0)
-                    cooldown[i]-=Time.deltaTime;
+                    cooldown[i]-=Time.deltaTime*Mathf.Pow(1.05f,speedMod);
                 else
                     cooldown[i]=0;
+                if(isAuto[i] && cooldown[i]==0)
+                {
+                    Vector3Int pos = blackList[Random.Range(0,blackList.Count)];
+                    PlaceFactory(i,pos,Random.Range(0,4));
+                }
                 upgrades.transform.GetChild(i+1).GetChild(2).GetComponent<RectTransform>().sizeDelta = new Vector2(65,100*cooldown[i]/facTypes[i].cooldown);
             }
             if(Input.GetMouseButtonDown(0)){
@@ -270,25 +309,22 @@ public class PlayerController : MonoBehaviour
                     switch(currMach){
                         case "liner":
                             if(cooldown[0]==0){
-                            factories.Add(new LinerFactory(cellPosition, dires[currDir], this));
-                            factorymap.SetTile(cellPosition,factoryTypes["liner"]);
-                            factorymap.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
-                            cooldown[0]=facTypes[0].cooldown;
+                                PlaceFactory(0,cellPosition,currDir);
                             }
                             break;
                         case "diamond":
                             if(cooldown[1]==0){
-                            factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0, 1, 0),this));
-                            factorymap.SetTile(cellPosition, factoryTypes["diamond"]);
-                            cooldown[1]=facTypes[1].cooldown;
+                                PlaceFactory(1,cellPosition,currDir);
                             }
                             break;
                         case "bomb":
                             if(cooldown[2]==0){
-                            Vector3 direction = dires[currDir] * 3 + new Vector3(0, Random.Range(0.3f, 3f), 0);
-                            factories.Add(new Bomb(cellPosition, direction, this));
-                            factorymap.SetTile(cellPosition, factoryTypes["bomb"]);
-                            cooldown[2]=facTypes[2].cooldown;
+                                PlaceFactory(2,cellPosition,currDir);
+                            }
+                            break;
+                        case "speed":
+                            if(cooldown[3]==0){
+                                PlaceFactory(3,cellPosition,currDir);
                             }
                             break;
                     }
@@ -352,9 +388,37 @@ public class PlayerController : MonoBehaviour
                                           Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0], dires[currDir])));
         }
         factoriesToAdd.Clear();
-        Debug.Log(factoriesToRemove);
+        //Debug.Log(factoriesToRemove);
     }
 
+    void PlaceFactory(int i, Vector3Int cellPosition, int dirp) {
+        switch(i){
+            case 0:
+                factories.Add(new LinerFactory(cellPosition, dires[dirp], this));
+                factorymap.SetTile(cellPosition,factoryTypes["liner"]);
+                factorymap.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[dirp])));
+                cooldown[0]=facTypes[0].cooldown;
+                break;
+            case 1:
+                factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0, 1, 0),this));
+                factorymap.SetTile(cellPosition, factoryTypes["diamond"]);
+                cooldown[1]=facTypes[1].cooldown;
+                break;
+            case 2:
+                Vector3 direction = dires[dirp] * 3 + new Vector3(0, Random.Range(0.3f, 3f), 0);
+                factories.Add(new Bomb(cellPosition, direction, this));
+                factorymap.SetTile(cellPosition, factoryTypes["bomb"]);
+                cooldown[2]=facTypes[2].cooldown;
+                break;
+            case 3:
+                factories.Add(new SpeedFactory(cellPosition, new Vector3Int(0, 1, 0),this));
+                factorymap.SetTile(cellPosition, factoryTypes["speed"]);
+                cooldown[3]=facTypes[3].cooldown;
+                speedMod+=1;
+                interval = 2 * Mathf.Pow(0.95f,speedMod);
+                break;
+        }
+    }
     void AddFactory(Factori factory) {
         factoriesToAdd.Add(factory);
     }
@@ -388,6 +452,7 @@ public class PlayerController : MonoBehaviour
         minx=Math.Min(minx,currx);
         miny=Math.Min(miny,curry);
         tilemap.SetTile(place,black);
+        blackList.Add(place);
         if(-50<=currx && currx<=50 && -50<=curry && curry<=50 && cutscene==0){
             if(localSpace<10000){
                 //totalSpace++;
@@ -411,13 +476,18 @@ public class PlayerController : MonoBehaviour
                             goalSpace = 10000;
                             break;
                         case 4:
+                            iterations += 1;
                             goalSpace = 10;
                             localSpace = 1;
                             phase = 0;
-                            cutscene = 1;
-                            iterations += 1;
                             dit = GenDiamond().GetEnumerator();
-                            StartCoroutine(ZoomTransition());
+                            if(iterations==5){
+                                cutscene = 2;
+                                StartCoroutine(EndScene());
+                            }else{
+                                cutscene = 1;
+                                StartCoroutine(ZoomTransition());
+                            }
                             break;
                     } 
                 }
@@ -435,6 +505,24 @@ public class PlayerController : MonoBehaviour
             case 2:
                 upgrades.transform.GetChild(2).gameObject.SetActive(true);
                 break;
+            case 3:
+                upgrades.transform.GetChild(3).gameObject.SetActive(true);
+                break;
+            case 4:
+                upgrades.transform.GetChild(4).gameObject.SetActive(true);
+                break;
+            case 5:
+                upgrades.transform.GetChild(1).GetChild(0).GetChild(1).gameObject.SetActive(true);
+                break;
+            case 6:
+                upgrades.transform.GetChild(2).GetChild(0).GetChild(1).gameObject.SetActive(true);
+                break;
+            case 7:
+                upgrades.transform.GetChild(3).GetChild(0).GetChild(1).gameObject.SetActive(true);
+                break;
+            case 8:
+                upgrades.transform.GetChild(4).GetChild(0).GetChild(1).gameObject.SetActive(true);
+                break;
         }
     }
     void UpdateScore(){
@@ -450,7 +538,17 @@ public class PlayerController : MonoBehaviour
         float currFade = 0;
         while (currFade < fadeTime)
         {
-            square.GetComponent<SpriteRenderer>().color = new Color(0, 0, 0, Mathf.SmoothStep(0, 1, currFade / fadeTime));
+            if(iterations==5){
+                //Debug.Log("wha");
+                square.GetComponent<SpriteRenderer>().color = new Color(0, 0, 0, 1);
+                wintext.GetComponent<Image>().color = new Color(1, 1, 1, Mathf.SmoothStep(1, 0, currFade / fadeTime));
+                wintext.transform.GetChild(0).GetComponent<TMP_Text>().color = new Color(1,1,1, Mathf.SmoothStep(1, 0, currFade / fadeTime));
+                wintext.transform.GetChild(1).GetComponent<TMP_Text>().color = new Color(1,1,1, Mathf.SmoothStep(1, 0, currFade / fadeTime));
+                wintext.transform.GetChild(2).GetComponent<TMP_Text>().color = new Color(1,1,1, Mathf.SmoothStep(1, 0, currFade / fadeTime));
+                camera.GetComponent<AudioSource>().volume = Mathf.SmoothStep(0,1,currFade / fadeTime);
+            }else{
+                square.GetComponent<SpriteRenderer>().color = new Color(0, 0, 0, Mathf.SmoothStep(0, 1, currFade / fadeTime));
+            }
             currFade += Time.deltaTime;
             //Debug.Log(currFade);
             yield return null;
@@ -459,7 +557,14 @@ public class PlayerController : MonoBehaviour
         factorymap.ClearAllTiles();
         Whiteout();
         square.GetComponent<SpriteRenderer>().color = new Color(0,0,0,0);
-        float zoomTime = 7;
+        float zoomTime;
+        if(iterations<3){
+            zoomTime = 7;
+        }else if(iterations==3){
+            zoomTime = 6;
+        }else {
+            zoomTime = 4;
+        }
         float currZoom = 0;
         while (currZoom < zoomTime)
         {
@@ -474,8 +579,94 @@ public class PlayerController : MonoBehaviour
         //Debug.Log(iterations);
         yield break;
     }
+
+    IEnumerator EndScene(){
+        float fadeTime = 6;
+        float currFade = 0;
+        while (currFade < fadeTime)
+        {
+            square.GetComponent<SpriteRenderer>().color = new Color(0, 0, 0, Mathf.SmoothStep(0, 1, currFade / fadeTime));
+            camera.GetComponent<AudioSource>().volume = Mathf.SmoothStep(1,0,currFade / fadeTime);
+            currFade += Time.deltaTime;
+            //Debug.Log(currFade);
+            yield return null;
+        }
+        factories.Clear();
+        factorymap.ClearAllTiles();
+        Whiteout();
+        square.GetComponent<SpriteRenderer>().color = new Color(0,0,0,0);
+        float zoomTime = 9.137f;
+        float currZoom = 0;
+        camera.GetComponent<AudioSource>().Stop();
+        camera.GetComponent<AudioSource>().volume = 1;
+        camera.GetComponent<AudioSource>().PlayOneShot(endTheme);
+        while (currZoom < zoomTime)
+        {
+            float adjust = Mathf.Pow(currZoom / zoomTime, 2);
+            camera.GetComponent<Camera>().orthographicSize = Mathf.Lerp(0.1f, 50, adjust);
+            currZoom += Time.deltaTime;
+            yield return null;
+        }
+        camera.GetComponent<Camera>().orthographicSize = 50;
+        GameObject newBoom = Instantiate(explosion,new Vector3(0.5f,0.5f,0),Quaternion.identity);
+        float waitTime=8;
+        float currTime=0;
+        while (currTime < waitTime){
+            currTime+=Time.deltaTime;
+            yield return null;
+        }
+        fadeTime = 7;
+        currFade = 0;
+        while (currFade < fadeTime)
+        {
+            wintext.GetComponent<Image>().color = new Color(1, 1, 1, Mathf.SmoothStep(0, 1, currFade / fadeTime));
+            currFade += Time.deltaTime;
+            yield return null;
+        }
+        Destroy(newBoom);
+        fadeTime = 4;
+        currFade = 0;
+        while (currFade < fadeTime)
+        {
+            wintext.transform.GetChild(0).GetComponent<TMP_Text>().color = new Color(1,1,1, Mathf.SmoothStep(0, 1, currFade / fadeTime));
+            currFade += Time.deltaTime;
+            yield return null;
+        }
+        fadeTime = 4;
+        currFade = 0;
+        while (currFade < fadeTime)
+        {
+            wintext.transform.GetChild(1).GetComponent<TMP_Text>().color = new Color(1,1,1, Mathf.SmoothStep(0, 1, currFade / fadeTime));
+            currFade += Time.deltaTime;
+            yield return null;
+        }
+        fadeTime = 4;
+        currFade = 0;
+        while (currFade < fadeTime)
+        {
+            wintext.transform.GetChild(2).GetComponent<TMP_Text>().color = new Color(1,1,1, Mathf.SmoothStep(0, 1, currFade / fadeTime));
+            currFade += Time.deltaTime;
+            yield return null;
+        }
+        waitTime=7;
+        currTime=0;
+        while (currTime < waitTime){
+            currTime+=Time.deltaTime;
+            yield return null;
+        }
+        
+        while(!Input.GetKeyDown(KeyCode.Space)){
+            yield return null;
+        }
+        
+        camera.GetComponent<AudioSource>().Play();
+        cutscene = 1;
+        StartCoroutine(ZoomTransition());
+        yield break;
+    }
     void Whiteout()
     {
+        blackList.Clear();
         for (int x = -50; x <= 50; x++)
         {
             for (int y = -50; y <= 50; y++)
@@ -484,11 +675,12 @@ public class PlayerController : MonoBehaviour
             }
         }
         tilemap.SetTile(new Vector3Int(0, 0), black);
+        blackList.Add(new Vector3Int(0, 0));
     }
     void AdjustCamera()
     {
         //Debug.Log(phase);
-        float adjust = Mathf.Log10(((float)localSpace+1000)/1000);
+        float adjust = Mathf.Log10(((float)localSpace+850)/950);
         switch(phase){
             case 2:
                 //adjust= ((float)totalSpace/10000);
@@ -531,6 +723,8 @@ public class PlayerController : MonoBehaviour
 
     public void Rotate(){
         currDir = (currDir+1)%4;
+        upgrades.transform.GetChild(1).GetChild(1).rotation = Quaternion.FromToRotation(dires[0],dires[currDir]);
+        upgrades.transform.GetChild(3).GetChild(1).rotation = Quaternion.FromToRotation(dires[0],dires[currDir]);
     }
     public void ButtonPress(int num){
         switch(num){
@@ -540,6 +734,12 @@ public class PlayerController : MonoBehaviour
             case 2:
                 currMach="diamond";
                 break;
+            case 3:
+                currMach="bomb";
+                break;
+            case 4:
+                currMach="speed";
+                break;
         }
     }
     public void AutoPress(int num){
@@ -548,7 +748,7 @@ public class PlayerController : MonoBehaviour
 
     void SetPressed(int num, bool on){
         isAuto[num-1]=on;
-        Debug.Log(on);
+        //Debug.Log(on);
         Transform button = upgrades.transform.GetChild(num).GetChild(0).GetChild(1);
         var color = button.GetComponent<Image>().color;
         if(on){
