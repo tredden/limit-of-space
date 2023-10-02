@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using UnityEngine.UI;
 
 
 public class Factori {
@@ -77,6 +78,7 @@ public class PlayerController : MonoBehaviour
     public int phase = 0;
     int cutscene = 0;
     int iterations = 0;
+    List<bool> isAuto = new List<bool>();
     readonly Vector3Int[] dires = new Vector3Int[]{new (0,1,0), new (1,0,0), new(0,-1,0), new (-1,0,0)};
     // Start is called before the first frame update
     void Start()
@@ -85,6 +87,9 @@ public class PlayerController : MonoBehaviour
         factories = new List<Factori>();
         foreach (FacType item in facTypes)
             factoryTypes.Add(item.key,item.val);
+        for(int i=0;i<factoryTypes.Count;i++){
+            isAuto.Add(false);
+        }
         //Debug.Log(factoryTypes.Keys);
         Debug.Log("gamestart");
         dit = GenDiamond().GetEnumerator();
@@ -144,6 +149,12 @@ public class PlayerController : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Alpha2)) {
                 currMach = "diamond";
             }
+            if (Input.GetKeyDown(KeyCode.Alpha3)) {
+                currMach = "bomb";
+            }
+            if (Input.GetKeyDown(KeyCode.Alpha4)) {
+                currMach = "speed";
+            }
             
             
             if(Input.GetKeyDown(KeyCode.Space)){
@@ -159,7 +170,7 @@ public class PlayerController : MonoBehaviour
             }
 
             if(Input.GetKeyDown(KeyCode.R)){
-                currDir = (currDir+1)%4;
+                upgrades.transform.GetChild(0).GetComponent<Button>().onClick.Invoke();
             }
         }
     }
@@ -337,4 +348,33 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    public void Rotate(){
+        currDir = (currDir+1)%4;
+    }
+    public void ButtonPress(int num){
+        switch(num){
+            case 1:
+                currMach="liner";
+                break;
+            case 2:
+                currMach="diamond";
+                break;
+        }
+    }
+    public void AutoPress(int num){
+        SetPressed(num,!isAuto[num-1]);
+    }
+
+    void SetPressed(int num, bool on){
+        isAuto[num-1]=on;
+        Debug.Log(on);
+        Transform button = upgrades.transform.GetChild(num).GetChild(0).GetChild(1);
+        var color = button.GetComponent<Image>().color;
+        if(on){
+            color = Color.red;
+        }else{
+            color = Color.white;
+        }
+        button.GetComponent<Image>().color = color;
+    }
 }
