@@ -19,6 +19,7 @@ public class Factori {
 public struct FacType{
     public string key;
     public Tile val;
+    public float cooldown;
 }
 public class PlayerController : MonoBehaviour
 {
@@ -79,6 +80,7 @@ public class PlayerController : MonoBehaviour
     int cutscene = 0;
     int iterations = 0;
     List<bool> isAuto = new List<bool>();
+    List<float> cooldown = new List<float>();
     readonly Vector3Int[] dires = new Vector3Int[]{new (0,1,0), new (1,0,0), new(0,-1,0), new (-1,0,0)};
     // Start is called before the first frame update
     void Start()
@@ -89,6 +91,7 @@ public class PlayerController : MonoBehaviour
             factoryTypes.Add(item.key,item.val);
         for(int i=0;i<factoryTypes.Count;i++){
             isAuto.Add(false);
+            cooldown.Add(0);
         }
         //Debug.Log(factoryTypes.Keys);
         Debug.Log("gamestart");
@@ -127,17 +130,30 @@ public class PlayerController : MonoBehaviour
             //float angle = Mathf.Atan2(dires[currDir].x, dires[currDir].y) * Mathf.Rad2Deg - 90f;
             previousTile = cellPosition;
 
+            for(int i=0;i<factoryTypes.Count;i++){
+                if(cooldown[i]>0)
+                    cooldown[i]-=Time.deltaTime;
+                else
+                    cooldown[i]=0;
+                upgrades.transform.GetChild(i+1).GetChild(2).GetComponent<RectTransform>().sizeDelta = new Vector2(65,100*cooldown[i]/facTypes[i].cooldown);
+            }
             if(Input.GetMouseButtonDown(0)){
-                if(tilemap.GetTile(cellPosition)==black){
+                if(tilemap.GetTile(cellPosition)==black && factorymap.GetTile(cellPosition)==null){
                     switch(currMach){
                         case "liner":
+                            if(cooldown[0]==0){
                             factories.Add(new Factori{position=cellPosition,type="liner",dir=dires[currDir],delay= UnityEngine.Random.Range(0.0f,1.0f)*interval});
                             factorymap.SetTile(cellPosition,factoryTypes["liner"]);
                             factorymap.SetTransformMatrix(cellPosition,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],dires[currDir])));
+                            cooldown[0]=facTypes[0].cooldown;
+                            }
                             break;
                         case "diamond":
+                            if(cooldown[1]==0){
                             factories.Add(new DiamondFactory(cellPosition, new Vector3Int(0, 1, 0),this));
                             factorymap.SetTile(cellPosition, factoryTypes["diamond"]);
+                            cooldown[1]=facTypes[1].cooldown;
+                            }
                             break;
                     }        
                 }
