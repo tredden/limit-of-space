@@ -2,8 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
-using UnityEditor.Tilemaps;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -15,6 +13,7 @@ public abstract class Factori
     public bool active = true;
 
     public abstract void Move();
+    public float delay = 0;
 }
 
 [Serializable]
@@ -91,6 +90,8 @@ public class PlayerController : MonoBehaviour
     public Tile white;
     public GameObject camera;
     public GameObject square;
+    public GameObject upgrades;
+    int upgradeLevel = 0;
     private int spacePress;
     private IEnumerator<Vector3Int> dit;
     private int maxx, maxy, minx, miny;
@@ -104,7 +105,7 @@ public class PlayerController : MonoBehaviour
     int currDir = 0;
     string currMach = "";
     UInt64 totalSpace = 1;
-    int goalSpace = 100;
+    int goalSpace = 10;
     int localSpace = 1;
     public int phase = 0;
     int cutscene = 0;
@@ -178,13 +179,11 @@ public class PlayerController : MonoBehaviour
                 }
             }
 
-            if (Input.GetKeyDown(KeyCode.Alpha1))
-            {
-                currMach = "diamond";
-            }
-            if (Input.GetKeyDown(KeyCode.Alpha2))
-            {
+            if (Input.GetKeyDown(KeyCode.Alpha1)) {
                 currMach = "liner";
+            }
+            if (Input.GetKeyDown(KeyCode.Alpha2)) {
+                currMach = "diamond";
             }
 
 
@@ -209,23 +208,37 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void FixedUpdate()
-    {
-        timer += Time.fixedDeltaTime;
-        while (timer >= interval)
-        {
-            DoFactories();
-            //Debug.Log("done factori");
-            timer -= interval;
-        }
-    }
-
-    void DoFactories()
-    {
-        for (int i = 0; i < factories.Count; i++)
-        {
+    void FixedUpdate(){
+        float delta = Time.fixedDeltaTime;
+        for(int i=0;i<factories.Count;i++){
             Factori machine = factories[i];
-            machine.Move();
+            machine.delay += delta;
+            if(machine.delay>=interval){
+                machine.delay-=interval;
+                machine.Move();
+                // switch(machine.type){
+                //     case "liner":
+                //         factorymap.SetTile(machine.position,null);
+                //         machine.position = machine.position + machine.dir;
+                //         factorymap.SetTile(machine.position,factoryTypes["liner"]);
+                //         factorymap.SetTransformMatrix(machine.position,Matrix4x4.Rotate(Quaternion.FromToRotation(dires[0],machine.dir)));
+            
+                //         MakeSpace(machine.position);
+                //         break;
+                //     case "diamond":
+                //         factorymap.SetTile(machine.position,null);
+                //         ((DiamondFactory) machine).Move();
+                //         factorymap.SetTile(machine.position,factoryTypes["diamond"]);
+                //         MakeSpace(machine.position);
+                //         break;
+                //     default:
+                //         break;
+                // }
+            // if(Math.Abs(machine.position.x) > 50 || Math.Abs(machine.position.y)>50){
+            //     machine.active=false;
+            //     factorymap.SetTile(machine.position,null);
+            // }
+            }
         }
     }
 
@@ -293,20 +306,27 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-
-    void UpdateScore()
-    {
-        string bigZeros = "";
-        for (int i = 0; i < iterations; i++)
-        {
-            bigZeros += "0000";
+    void Upgrade(){
+        upgradeLevel+=1;
+        switch(upgradeLevel){
+            case 1:
+                upgrades.SetActive(true);
+                break;
+            case 2:
+                upgrades.transform.GetChild(2).gameObject.SetActive(true);
+                break;
+        }
+    }
+    void UpdateScore(){
+        string bigZeros="";
+        for(int i=0;i<iterations;i++){
+            bigZeros +="0000";
         }
         totalScoreDisplay.text = localSpace.ToString() + bigZeros + " / " + goalSpace.ToString() + bigZeros;
     }
 
-    IEnumerator ZoomTransition()
-    {
-        float fadeTime = 5;
+    IEnumerator ZoomTransition(){
+        float fadeTime = 6;
         float currFade = 0;
         while (currFade < fadeTime)
         {
@@ -317,8 +337,8 @@ public class PlayerController : MonoBehaviour
         }
         factories.Clear();
         Whiteout();
-        square.GetComponent<SpriteRenderer>().color = new Color(0, 0, 0, 0);
-        float zoomTime = 5;
+        square.GetComponent<SpriteRenderer>().color = new Color(0,0,0,0);
+        float zoomTime = 7;
         float currZoom = 0;
         while (currZoom < zoomTime)
         {
@@ -347,15 +367,14 @@ public class PlayerController : MonoBehaviour
     void AdjustCamera()
     {
         //Debug.Log(phase);
-        float adjust = Mathf.Log10(((float)localSpace + 1000) / 1000);
-        switch (phase)
-        {
-            case 1:
+        float adjust = Mathf.Log10(((float)localSpace+1000)/1000);
+        switch(phase){
+            case 2:
                 //adjust= ((float)totalSpace/10000);
                 //Debug.Log(adjust); 
                 camera.GetComponent<Camera>().orthographicSize = Mathf.Lerp(5, 50, adjust);
                 break;
-            case 2:
+            case 3:
                 //adjust= ((float)totalSpace/10000);
                 //Debug.Log(adjust); 
                 camera.GetComponent<Camera>().orthographicSize = Mathf.Lerp(5, 50, adjust);
